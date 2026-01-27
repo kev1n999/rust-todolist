@@ -1,23 +1,24 @@
 use std::io; 
-use serde_json::{Serializer, Deserializer}; 
-use std::fmt; 
+use serde::{Deserialize, Serialize}; 
+use std::fs::File;
+use std::io::{Write};
 
 // TodoList in rust
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Status {
   Pending,
   Completed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Priority {
   Low,
   Medium,
   High,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Task {
   name: String,
   description: String,
@@ -25,6 +26,7 @@ struct Task {
   priority: Priority, 
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct TodoList {
   tasks: Vec<Task>,
   max: usize,
@@ -53,6 +55,15 @@ impl TodoList {
 
     Some(&self.tasks) 
   }
+
+  fn save_tasks(&self) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file_tasks = File::create("tasks.json")?;
+    
+    let json = serde_json::to_string(&self.tasks)?;
+    file_tasks.write_all(json.as_bytes())?;
+
+    Ok(())
+  }
 }
 
 fn main() {
@@ -62,18 +73,17 @@ fn main() {
   }; 
 
   let task = Task::new("louça".to_string(), "sla".to_string(), Status::Pending, Priority::Low);
-
-  let addtask = todo.add_new_task(task);
-
-  match addtask {
-    Ok(_) => println!("Task created!"), 
-    Err(err) => println!("{:?}", err),
-  }
-
+  let task2 = Task::new("louasdada".to_string(), "slasdada".to_string(), Status::Completed, Priority::Low);
+  
+  todo.add_new_task(task);
+  todo.add_new_task(task2);
+  
   let tasks = todo.get_all_tasks();
   
   match tasks {
     Some(task) => println!("{:?}", task),
     None => println!("An error ocurred"), 
   }
+
+  todo.save_tasks();
 }
