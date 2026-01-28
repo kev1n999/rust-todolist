@@ -2,7 +2,6 @@ use std::io;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Write};
-use std::process::Command;
 
 // TodoList in rust
 
@@ -136,7 +135,7 @@ impl TodoList {
     let mut id = String::new();
 
     println!("Type the stack id to delete: ");
-    io::stdin()
+    let _ = io::stdin()
       .read_line(&mut id);
 
     let tasks_founded = self.get_task_by_filter(Filter::Id(id.clone())); 
@@ -147,7 +146,7 @@ impl TodoList {
 
         let mut answer = String::new();
 
-        io::stdin()
+        let _ = io::stdin()
           .read_line(&mut answer);
 
         match answer.trim().to_lowercase().as_str() {
@@ -177,6 +176,24 @@ fn get_priority(priority: &str) -> Option<Priority> {
   }
 }
 
+fn get_status(status: &str) -> Option<Status> {
+  match status.trim().to_lowercase().as_str() {
+    "pending" => Some(Status::Pending),
+    "complteted" => Some(Status::Completed),
+    _ => None,
+  }
+}
+
+fn get_priority_and_status(
+  priority: &str, 
+  status: &str) -> Option<(Priority, Status)> {
+
+  let priority_getted = get_priority(priority)?;
+  let status_getted = get_status(status)?;
+
+  Some((priority_getted, status_getted))
+}
+
 // Get atributtes to create a new task
 fn get_atributtes(
   name: &mut String,
@@ -187,23 +204,23 @@ fn get_atributtes(
 ) {
   println!("[Task name] Type the task name: ");
   io::stdin()
-    .read_line(name);
+    .read_line(name).expect("an error ocurred");
 
   println!("[Task description] Type the task description: ");
   io::stdin()
-    .read_line(description);
+    .read_line(description).expect("an error ocurred");
 
   println!("[Task status] Type the task status: ");
   io::stdin()
-    .read_line(status);
+    .read_line(status).expect("an error ocurred");
 
   println!("[Task priority][Low, Medium, High] Type the task priority: ");
   io::stdin()
-    .read_line(priority);
+    .read_line(priority).expect("an error ocurred");
 
   println!("[Task id] Type the task id: ");
   io::stdin()
-    .read_line(id);
+    .read_line(id).expect("an error ocurred");
 }
 
 fn display_commands() {
@@ -226,8 +243,11 @@ fn create_task(
   priority: &mut String, id: &mut String) {
   get_atributtes(name, description, status, priority, id);
 
-  if let Some(priority) = get_priority(&priority) {
-    let task = Task::new(name.to_string(), description.to_string(), Status::Pending, priority, id.to_string());
+  if let Some((priority, status)) = get_priority_and_status(&priority, &status) {
+    let task = Task::new(
+      name.to_string(), 
+      description.to_string(), 
+      status, priority, id.to_string());
 
     match todo.add_new_task(task) {
       Ok(()) => println!("Task created!"),
@@ -253,12 +273,54 @@ fn main() {
     display_commands();
     command.clear();
 
-    io::stdin()
+    let _ = io::stdin()
       .read_line(&mut command); 
 
     match command.trim().chars().next() {
       Some('0') => create_task(&mut todo, &mut name, &mut description, &mut status, &mut priority, &mut id),
       Some('2') => todo.delete_task().expect("An error ocurred to delete the tasks"),
+      Some('3') => {
+        let mut filter_option = String::new();
+        println!("Type the filter option[Name, Status, Priority, Id]: ");
+        let _ = io::stdin()
+          .read_line(&mut filter_option); 
+
+        println!("Type the filter content[Content of {}]: ", filter_option);
+        let mut filter_content = String::new();
+        let _ = io::stdin()
+          .read_line(&mut filter_content);
+
+        match filter_option.trim().to_lowercase().as_str() {
+            "name" => println!(
+                "{:?}",
+                todo.get_task_by_filter(Filter::Name(filter_content))
+            ),
+
+            "status" => println!(
+                "{:?}",
+                todo.get_task_by_filter(Filter::Status(
+                    get_status(filter_content.as_str())
+                        .expect("An error occurred to read this filter"),
+                ))
+            ),
+
+            "priority" => println!(
+                "{:?}",
+                todo.get_task_by_filter(Filter::Priority(
+                    get_priority(priority.as_str())
+                        .expect("An error occurred to read this filter"),
+                ))
+            ),
+
+            "id" => println!(
+                "{:?}",
+                todo.get_task_by_filter(Filter::Id(filter_content))
+            ),
+
+            _ => println!("Invalid filter option"),
+        }
+
+      },
       Some('5') => panic!("Quited."), 
       _ => println!("Invalid command!"), 
     }
