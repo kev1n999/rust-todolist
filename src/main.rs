@@ -1,8 +1,8 @@
 use std::io; 
 use serde::{Deserialize, Serialize};
-use serde_json::ser::Formatter; 
 use std::fs::File;
 use std::io::{Write};
+use std::process::Command;
 
 // TodoList in rust
 
@@ -26,6 +26,7 @@ enum Filter {
   Name(String),
   Status(Status),
   Priority(Priority),
+  Id(String),
 }
 
 // Enum for todolist commands
@@ -54,6 +55,7 @@ struct Task {
   description: String,
   status: Status,
   priority: Priority, 
+  id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,8 +66,8 @@ struct TodoList {
 
 impl Task {
   // Function to create a new task
-  fn new(name: String, description: String, status: Status, priority: Priority) -> Self {
-    Task { name, description, status, priority }
+  fn new(name: String, description: String, status: Status, priority: Priority, id: String) -> Self {
+    Task { name, description, status: Status::Pending, priority, id }
   }
 }
 
@@ -118,11 +120,70 @@ impl TodoList {
         |task| task.priority == priority 
       ).collect(),
 
+      Filter::Id(id) => self.tasks.iter().filter(
+        |task| task.id == id
+      ).collect(),
+
       _ => return None,
     };
 
     Some(tasks)
   }
+
+  fn delete_task(&mut self) -> Result<(), String> {
+    if self.tasks.is_empty() {
+      return Err("The todolist is empty".to_string());
+    }
+
+    let mut id = String::new();
+
+    println!("Type the stack id to delete: ");
+    io::stdin()
+      .read_line(&mut id);
+
+    let tasksFounded = self.get_task_by_filter(Filter::Id(id.clone())); 
+
+    match tasksFounded {
+      Some(tasks) => {
+        println!("Tasks founded:\n{:?}", tasks);
+
+        let mut answer = String::new();
+
+        io::stdin()
+          .read_line(&mut answer);
+
+        match answer.trim().to_lowercase().as_str() {
+          "yes" => {
+            self.tasks.retain(|task| task.id != id.to_string());
+            return Ok(());
+          },
+          "no" => return Ok(()),
+
+          _ => println!("Invalid answer"),
+        }
+      }, 
+      _ => println!("Tasks not found by this id"),
+    }
+
+    Ok(())
+  }
+}
+
+fn sys_command(command: &str) {
+  let output = if cfg!(target_os = "windows") {
+    Command::new("cmd")
+      .arg("/C")
+      .arg(command)
+      .output()
+      .expect("An error ocurred to execute this command");
+
+  } else {
+    Command::new("sh")
+      .arg("-c")
+      .arg(command)
+      .output()
+      .expect("An error ocurred to execute this command");
+  };
 }
 
 fn get_priority(priority: &str) -> Option<Priority> {
@@ -135,10 +196,12 @@ fn get_priority(priority: &str) -> Option<Priority> {
   }
 }
 
+// Get atributtes to create a new task
 fn get_atributtes(
   name: &mut String,
   description: &mut String,
   priority: &mut String,
+  id: &mut String,
 ) {
   println!("[Task name] Type the task name: ");
   io::stdin()
@@ -147,14 +210,14 @@ fn get_atributtes(
   println!("[Task description] Type the task description: ");
   io::stdin()
     .read_line(description);
-  /**
-   *     io::stdin()
-   * .read_line(status);
-   */
   
   println!("[Task priority][Low, Medium, High] Type the task priority: ");
   io::stdin()
     .read_line(priority);
+
+  println!("[Task id] Type the task id: ");
+  io::stdin()
+    .read_line(id);
 }
 
 fn display_commands() {
@@ -169,11 +232,11 @@ fn display_commands() {
   ");
 }
 
-fn create_task(todo: &mut TodoList, name: &mut String, description: &mut String, priority: &mut String) {
-  get_atributtes(name, description, priority);
+fn create_task(todo: &mut TodoList, name: &mut String, description: &mut String, priority: &mut String, id: &mut String) {
+  get_atributtes(name, description, priority, id);
 
   if let Some(priority) = get_priority(&priority) {
-    let task = Task::new(name.to_string(), description.to_string(), Status::Pending, priority);
+    let task = Task::new(name.to_string(), description.to_string(), Status::Pending, priority, id.to_string());
 
     match todo.add_new_task(task) {
       Ok(()) => println!("Task created!"),
@@ -186,6 +249,7 @@ fn main() {
   let mut name = String::new();
   let mut description = String::new();
   let mut priority = String::new();
+  let mut id = String::new();
 
   let mut command = String::new(); 
   let mut todo = TodoList {
@@ -195,14 +259,16 @@ fn main() {
 
   loop {
     display_commands();
+    command.clear();
+
     io::stdin()
       .read_line(&mut command); 
 
     match command.trim().chars().next() {
-      Some('0') => create_task(&mut todo, &mut name, &mut description, &mut priority),
-
+      Some('0') => create_task(&mut todo, &mut name, &mut description, &mut priority, &mut id),
+      Some('2') => todo.delete_task().expect("An error ocurred to delete the tasks"),
+      Some('5') => panic!("Quited."), 
       _ => println!("Invalid command!"), 
     }
   }
-
 }
