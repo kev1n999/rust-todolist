@@ -67,7 +67,7 @@ struct TodoList {
 impl Task {
   // Function to create a new task
   fn new(name: String, description: String, status: Status, priority: Priority, id: String) -> Self {
-    Task { name, description, status: Status::Pending, priority, id }
+    Task { name, description, status: status, priority, id }
   }
 }
 
@@ -75,7 +75,7 @@ impl TodoList {
   // Function to add a new task in the list
   fn add_new_task(&mut self, task: Task) -> Result<(), String> {
     if self.tasks.len() > self.max {
-      return Err("".to_string());
+      return Err("Maximum number of tasks rechead".to_string());
     } 
 
     self.tasks.push(task);
@@ -123,8 +123,6 @@ impl TodoList {
       Filter::Id(id) => self.tasks.iter().filter(
         |task| task.id == id
       ).collect(),
-
-      _ => return None,
     };
 
     Some(tasks)
@@ -141,9 +139,9 @@ impl TodoList {
     io::stdin()
       .read_line(&mut id);
 
-    let tasksFounded = self.get_task_by_filter(Filter::Id(id.clone())); 
+    let tasks_founded = self.get_task_by_filter(Filter::Id(id.clone())); 
 
-    match tasksFounded {
+    match tasks_founded {
       Some(tasks) => {
         println!("Tasks founded:\n{:?}", tasks);
 
@@ -169,23 +167,6 @@ impl TodoList {
   }
 }
 
-fn sys_command(command: &str) {
-  let output = if cfg!(target_os = "windows") {
-    Command::new("cmd")
-      .arg("/C")
-      .arg(command)
-      .output()
-      .expect("An error ocurred to execute this command");
-
-  } else {
-    Command::new("sh")
-      .arg("-c")
-      .arg(command)
-      .output()
-      .expect("An error ocurred to execute this command");
-  };
-}
-
 fn get_priority(priority: &str) -> Option<Priority> {
   match priority.trim().to_lowercase().as_str() {
     "low" => Some(Priority::Low),
@@ -200,6 +181,7 @@ fn get_priority(priority: &str) -> Option<Priority> {
 fn get_atributtes(
   name: &mut String,
   description: &mut String,
+  status: &mut String,
   priority: &mut String,
   id: &mut String,
 ) {
@@ -210,7 +192,11 @@ fn get_atributtes(
   println!("[Task description] Type the task description: ");
   io::stdin()
     .read_line(description);
-  
+
+  println!("[Task status] Type the task status: ");
+  io::stdin()
+    .read_line(status);
+
   println!("[Task priority][Low, Medium, High] Type the task priority: ");
   io::stdin()
     .read_line(priority);
@@ -228,12 +214,17 @@ fn display_commands() {
     [3] Find a specific task 
     [4] Delete all tasks 
     [5] Save tasks in json
-    [5] quit 
+    [6] quit 
   ");
 }
 
-fn create_task(todo: &mut TodoList, name: &mut String, description: &mut String, priority: &mut String, id: &mut String) {
-  get_atributtes(name, description, priority, id);
+fn create_task(
+  todo: &mut TodoList, 
+  name: &mut String, 
+  description: &mut String, 
+  status: &mut String, 
+  priority: &mut String, id: &mut String) {
+  get_atributtes(name, description, status, priority, id);
 
   if let Some(priority) = get_priority(&priority) {
     let task = Task::new(name.to_string(), description.to_string(), Status::Pending, priority, id.to_string());
@@ -248,6 +239,7 @@ fn create_task(todo: &mut TodoList, name: &mut String, description: &mut String,
 fn main() {
   let mut name = String::new();
   let mut description = String::new();
+  let mut status = String::new();
   let mut priority = String::new();
   let mut id = String::new();
 
@@ -265,7 +257,7 @@ fn main() {
       .read_line(&mut command); 
 
     match command.trim().chars().next() {
-      Some('0') => create_task(&mut todo, &mut name, &mut description, &mut priority, &mut id),
+      Some('0') => create_task(&mut todo, &mut name, &mut description, &mut status, &mut priority, &mut id),
       Some('2') => todo.delete_task().expect("An error ocurred to delete the tasks"),
       Some('5') => panic!("Quited."), 
       _ => println!("Invalid command!"), 
