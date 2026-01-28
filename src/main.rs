@@ -5,17 +5,23 @@ use std::io::{Write};
 
 // TodoList in rust
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 enum Status {
   Pending,
   Completed,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 enum Priority {
   Low,
   Medium,
   High,
+}
+
+enum Filter {
+  Name(String),
+  Status(Status),
+  Priority(Priority),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,6 +70,30 @@ impl TodoList {
 
     Ok(())
   }
+
+  fn get_task_by_filter(&self, filter: Filter) -> Option<Vec<&Task>> {
+    if self.tasks.is_empty() {
+      return None; 
+    }
+
+    let tasks: Vec<&Task> = match filter {
+      Filter::Name(name) => self.tasks.iter().filter(
+        |task| task.name.as_str() == name
+      ).collect(),
+
+      Filter::Status(status) => self.tasks.iter().filter(
+        |task| task.status == status
+      ).collect(),
+
+      Filter::Priority(priority) => self.tasks.iter().filter(
+        |task| task.priority == priority 
+      ).collect(),
+
+      _ => return None,
+    };
+
+    Some(tasks)
+  }
 }
 
 fn main() {
@@ -72,18 +102,17 @@ fn main() {
     max: 10, 
   }; 
 
-  let task = Task::new("louça".to_string(), "sla".to_string(), Status::Pending, Priority::Low);
+  let task = Task::new("louça".to_string(), "sla".to_string(), Status::Pending, Priority::High);
   let task2 = Task::new("louasdada".to_string(), "slasdada".to_string(), Status::Completed, Priority::Low);
   
   todo.add_new_task(task);
   todo.add_new_task(task2);
-  
-  let tasks = todo.get_all_tasks();
-  
-  match tasks {
-    Some(task) => println!("{:?}", task),
-    None => println!("An error ocurred"), 
-  }
-
   todo.save_tasks();
+
+  let byname = todo.get_task_by_filter(Filter::Priority(Priority::High));
+
+  match byname {
+    Some(task) => println!("{:?}", task),
+    _ => println!("an error ocurred!"),
+  }
 }
