@@ -42,8 +42,6 @@ enum TaskCommands {
     FindTask,
     // Delete all tasks
     DeleteAllTask,
-    // Save tasks in json file
-    SaveTasks,
     // Quit the program
     Quit,
 }
@@ -86,7 +84,7 @@ impl TodoList {
     // Function to add a new task in the list
     fn add_new_task(&mut self, task: Task) -> Result<(), String> {
         if self.tasks.len() > self.max {
-            return Err("Maximum number of tasks rechead".to_string());
+            return Err("Maximum number of tasks reached".to_string());
         }
 
         self.tasks.push(task);
@@ -193,7 +191,7 @@ fn get_priority(priority: &str) -> Option<Priority> {
 fn get_status(status: &str) -> Option<Status> {
     match status.trim().to_lowercase().as_str() {
         "pending" => Some(Status::Pending),
-        "complteted" => Some(Status::Completed),
+        "completed" => Some(Status::Completed),
         _ => None,
     }
 }
@@ -239,8 +237,7 @@ fn display_commands() {
     [2] Delete a specific task
     [3] Find a specific task
     [4] Delete all tasks
-    [5] Save tasks in json
-    [6] quit
+    [5] quit
   "
     );
 }
@@ -265,7 +262,10 @@ fn create_task(
         );
 
         match todo.add_new_task(task) {
-            Ok(()) => println!("Task created!"),
+            Ok(()) => match todo.save_tasks() {
+                Ok(()) => println!("Task created and saved!"),
+                Err(err) => println!("Task doesn't saved: {:?}", err),
+            },
             _ => println!("Task doesn't created!"),
         }
     }
@@ -339,11 +339,7 @@ fn main() {
                 }
             }
 
-            Some('5') => match todo.save_tasks() {
-                Ok(()) => println!("Tasks saved in tasks.json!"),
-                Err(err) => println!("Tasks doesnt saved: {}", err),
-            },
-            Some('6') => panic!("Quited."),
+            Some('5') => panic!("Quited."),
             _ => println!("Invalid command!"),
         }
     }
